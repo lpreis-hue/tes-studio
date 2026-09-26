@@ -58,15 +58,25 @@ class RunEntropy:
         n_iter = len(n_vals) if n_vals is not None else 1
         total = len(T_vals) * len(P_vals) * n_iter
         count = 0
+        # Mantemos um ponto de partida por composição de alimentação. Isso
+        # acelera pontos vizinhos sem reutilizar balanços de outra composição.
+        warm_guesses = [None] * n_iter
+        warm_temperatures = [None] * n_iter
 
         for T in T_vals:
             for P in P_vals:
                 if ref_idx is not None and n_vals is not None:
-                    for n in n_vals:
+                    for n_idx, n in enumerate(n_vals):
                         initial_copy = self.initial.copy()
                         initial_copy[ref_idx] = n
                         try:
-                            result, Teq = solver.solve_entropy(initial_copy, T, P)
+                            result, Teq = solver.solve_entropy(
+                                initial_copy, T, P,
+                                initial_guess=warm_guesses[n_idx],
+                                temperature_guess=warm_temperatures[n_idx],
+                            )
+                            warm_guesses[n_idx] = np.asarray(result, dtype=float)
+                            warm_temperatures[n_idx] = Teq
                         except Exception as e:
                             warnings.warn(f"Entropy falhou em T={T:.1f}, P={P:.3f}, n={n:.4f}: {e}")
                             result, Teq = nan_row, float('nan')
@@ -80,7 +90,13 @@ class RunEntropy:
                             progress_callback(count, total)
                 else:
                     try:
-                        result, Teq = solver.solve_entropy(self.initial.copy(), T, P)
+                        result, Teq = solver.solve_entropy(
+                            self.initial.copy(), T, P,
+                            initial_guess=warm_guesses[0],
+                            temperature_guess=warm_temperatures[0],
+                        )
+                        warm_guesses[0] = np.asarray(result, dtype=float)
+                        warm_temperatures[0] = Teq
                     except Exception as e:
                         warnings.warn(f"Entropy falhou em T={T:.1f}, P={P:.3f}: {e}")
                         result, Teq = nan_row, float('nan')

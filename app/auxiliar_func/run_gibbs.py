@@ -58,15 +58,22 @@ class RunGibbs:
         n_iter = len(n_vals) if n_vals is not None else 1
         total = len(T_vals) * len(P_vals) * n_iter
         count = 0
+        # Uma solução anterior por composição de alimentação. Assim, cada
+        # ponto começa próximo do equilíbrio sem misturar balanços diferentes.
+        warm_guesses = [None] * n_iter
 
         for T in T_vals:
             for P in P_vals:
                 if ref_idx is not None and n_vals is not None:
-                    for n in n_vals:
+                    for n_idx, n in enumerate(n_vals):
                         initial_copy = self.initial.copy()
                         initial_copy[ref_idx] = n
                         try:
-                            result = solver.solve_gibbs(initial_copy, T, P)
+                            result = solver.solve_gibbs(
+                                initial_copy, T, P,
+                                initial_guess=warm_guesses[n_idx],
+                            )
+                            warm_guesses[n_idx] = np.asarray(result, dtype=float)
                         except Exception as e:
                             warnings.warn(f"Gibbs falhou em T={T:.1f}, P={P:.3f}, n={n:.4f}: {e}")
                             result = nan_row
@@ -79,7 +86,11 @@ class RunGibbs:
                             progress_callback(count, total)
                 else:
                     try:
-                        result = solver.solve_gibbs(self.initial.copy(), T, P)
+                        result = solver.solve_gibbs(
+                            self.initial.copy(), T, P,
+                            initial_guess=warm_guesses[0],
+                        )
+                        warm_guesses[0] = np.asarray(result, dtype=float)
                     except Exception as e:
                         warnings.warn(f"Gibbs falhou em T={T:.1f}, P={P:.3f}: {e}")
                         result = nan_row

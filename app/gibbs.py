@@ -48,7 +48,7 @@ class Gibbs:
 
         return bnds
 
-    def solve_gibbs(self, initial, T, P):
+    def solve_gibbs(self, initial, T, P, initial_guess=None):
         initial = np.where(initial == 0, 1e-5, initial).astype(float)
         bnds = self.bnds_values(initial)
 
@@ -108,9 +108,18 @@ class Gibbs:
         lb = [b[0] for b in bnds]
         ub = [b[1] for b in bnds]
 
+        # A solução de um ponto vizinho da malha costuma estar muito perto da
+        # solução do ponto atual. Reaproveitá-la reduz as iterações do IPOPT sem
+        # alterar o balanço material, os limites ou a tolerância do problema.
+        x0 = initial
+        if initial_guess is not None:
+            candidate = np.asarray(initial_guess, dtype=float)
+            if candidate.shape == initial.shape and np.all(np.isfinite(candidate)):
+                x0 = np.clip(candidate, lb, ub)
+
         result = cyipopt.minimize_ipopt(
             fun=objective,
-            x0=initial,
+            x0=x0,
             jac=gradient,
             bounds=list(zip(lb, ub)),
             constraints=[{

@@ -33,8 +33,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"TeS Studio {__version__}")
         self.setWindowIcon(QIcon(resource_path("ico.ico")))
-        self.setMinimumSize(1050, 720)
-        self.resize(1280, 840)
+        self.setMinimumSize(1180, 740)
+        self.resize(1500, 920)
 
         root = QWidget(objectName="appRoot")
         self.setCentralWidget(root)
@@ -45,8 +45,8 @@ class MainWindow(QMainWindow):
 
         content = QFrame(objectName="contentArea")
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(28, 22, 28, 24)
-        content_layout.setSpacing(16)
+        content_layout.setContentsMargins(20, 14, 20, 16)
+        content_layout.setSpacing(12)
         content_layout.addLayout(self._build_header())
 
         self.stack = QStackedWidget(objectName="workspaceStack")
@@ -62,22 +62,17 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self) -> QFrame:
         sidebar = QFrame(objectName="sidebar")
-        sidebar.setFixedWidth(264)
+        sidebar.setFixedWidth(204)
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(20, 24, 20, 24)
-        layout.setSpacing(10)
+        layout.setContentsMargins(16, 20, 16, 20)
+        layout.setSpacing(8)
 
         brand = QLabel("TeS", objectName="brandName")
         brand.setAccessibleName("TeS Studio")
         layout.addWidget(brand)
         layout.addWidget(QLabel("STUDIO", objectName="brandStudio"))
-        layout.addWidget(
-            QLabel(
-                "Equilíbrio termodinâmico\ncom solver IPOPT",
-                objectName="brandDescription",
-            )
-        )
-        layout.addSpacing(22)
+        layout.addWidget(QLabel("Equilíbrio termodinâmico", objectName="brandDescription"))
+        layout.addSpacing(18)
         layout.addWidget(QLabel("NAVEGAÇÃO", objectName="sidebarSection"))
 
         self.navigation_group = QButtonGroup(self)
@@ -112,7 +107,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(titles)
         layout.addStretch(1)
 
-        solver_badge = QLabel("IPOPT", objectName="solverBadge")
+        solver_badge = QLabel("●  IPOPT conectado", objectName="solverBadge")
         solver_badge.setToolTip("Interior Point OPTimizer")
         layout.addWidget(solver_badge, alignment=Qt.AlignmentFlag.AlignTop)
         return layout

@@ -47,7 +47,8 @@ class Entropy:
 
         return bnds
 
-    def solve_entropy(self, initial, Tinit, P):
+    def solve_entropy(self, initial, Tinit, P, initial_guess=None,
+                      temperature_guess=None):
         initial = np.asarray(initial, dtype=float)
         bnds = self.bnds_values(initial)
         nc = self.total_components
@@ -65,9 +66,22 @@ class Entropy:
         b_elem = self.A.T @ initial  # shape (total_species,)
 
         # x = [n[0..nc-1], T]
-        x0 = np.append(initial, Tinit)
         lb = [b[0] for b in bnds] + [100.0]
         ub = [b[1] for b in bnds] + [10000.0]
+
+        n0 = initial
+        if initial_guess is not None:
+            candidate = np.asarray(initial_guess, dtype=float)
+            if candidate.shape == initial.shape and np.all(np.isfinite(candidate)):
+                n0 = np.clip(candidate, lb[:nc], ub[:nc])
+
+        T_guess = Tinit
+        if temperature_guess is not None and np.isfinite(temperature_guess):
+            T_guess = float(np.clip(temperature_guess, lb[nc], ub[nc]))
+
+        # O equilíbrio do ponto vizinho fornece somente o ponto de partida. Os
+        # balanços e a precisão continuam sendo calculados para o ponto atual.
+        x0 = np.append(n0, T_guess)
 
         def objective(x):
             n = x[:nc]

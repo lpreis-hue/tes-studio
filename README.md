@@ -4,6 +4,11 @@ Aplicativo desktop para simulação de equilíbrio termodinâmico com minimizaç
 de energia de Gibbs e maximização de entropia. Esta evolução mantém o núcleo
 numérico do TeS-IPOPT e organiza a interface, os recursos e o empacotamento.
 
+A interface técnica escura organiza cada módulo em três áreas: dados de
+entrada, parâmetros e acompanhamento da execução. O total de cenários é
+mostrado antes da simulação e o andamento apresenta percentual e estimativa
+de tempo restante.
+
 ## Executar em desenvolvimento
 
 O caminho recomendado, especialmente no Windows, é usar Conda porque o
@@ -48,6 +53,11 @@ passo está em
 O arquivo `numerical_core.sha256.json` protege os módulos de cálculo contra
 alterações acidentais durante a evolução visual. Veja também
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+Nas simulações com vários valores de temperatura e pressão, o resultado do
+ponto anterior é usado somente como estimativa inicial para o IPOPT no ponto
+vizinho. Cada ponto continua sendo resolvido com seus próprios balanços,
+limites e tolerâncias.
 
 ## Documentação científica original
 

@@ -137,27 +137,27 @@ class InitialScreen(QWidget):
     @staticmethod
     def _styles():
         return """
-        QWidget#overviewPage { background: #ffffff; }
+        QWidget#overviewPage { background: #07131f; }
         QFrame#overviewHero {
-            background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 12px;
+            background: #0c2130; border: 1px solid #22506a; border-radius: 10px;
         }
-        QLabel#heroTitle { color: #164e63; font-size: 21px; font-weight: 700; }
-        QLabel#heroSubtitle { color: #475569; font-size: 13px; }
+        QLabel#heroTitle { color: #eef9ff; font-size: 21px; font-weight: 700; }
+        QLabel#heroSubtitle { color: #8eacbf; font-size: 13px; }
         QFrame#methodCard {
-            background: #f8fafc; border: 1px solid #dbe3ef; border-radius: 10px;
+            background: #0c1d2b; border: 1px solid #203b4f; border-radius: 9px;
             min-height: 150px;
         }
-        QLabel#cardTitle { color: #0f172a; font-size: 16px; font-weight: 700; }
-        QLabel#cardDescription { color: #64748b; font-size: 12px; }
-        QLabel#footerLabel { color: #475569; font-size: 12px; font-weight: 600; }
+        QLabel#cardTitle { color: #edf8ff; font-size: 16px; font-weight: 700; }
+        QLabel#cardDescription { color: #86a1b5; font-size: 12px; }
+        QLabel#footerLabel { color: #9bb2c3; font-size: 12px; font-weight: 600; }
         QPushButton#primaryButton {
-            color: white; background: #0e7490; border: none; border-radius: 7px;
+            color: white; background: #087da3; border: 1px solid #16bad8; border-radius: 7px;
             padding: 9px 14px; font-weight: 600;
         }
-        QPushButton#primaryButton:hover { background: #0891b2; }
+        QPushButton#primaryButton:hover { background: #0c98c5; }
         QPushButton#secondaryButton {
-            color: #155e75; background: #ffffff; border: 1px solid #a5f3fc;
+            color: #c8dfeb; background: #10283a; border: 1px solid #31546b;
             border-radius: 7px; padding: 8px 13px; font-weight: 600;
         }
-        QPushButton#secondaryButton:hover { background: #ecfeff; }
+        QPushButton#secondaryButton:hover { background: #173b50; }
         """
