@@ -9,7 +9,9 @@ dependencies:
   - scipy=1.15
   - pandas=2.3
   - seaborn=0.13
-  - matplotlib=3.10
-  - pyqt6=6.11
+  - matplotlib-base=3.10
   - openpyxl=3.1
   - pyinstaller>=6.15,<7
+  - pip
+  - pip:
+      - PyQt6==6.9.1
