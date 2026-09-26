@@ -1,0 +1,15 @@
+name: tes-studio
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - cyipopt=1.6
+  - ipopt
+  - numpy=2.3
+  - scipy=1.15
+  - pandas=2.3
+  - seaborn=0.13
+  - matplotlib=3.10
+  - pyqt=6.9
+  - openpyxl=3.1
+  - pyinstaller>=6.15,<7

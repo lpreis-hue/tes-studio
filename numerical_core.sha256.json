@@ -1,0 +1,11 @@
+{
+  "app/gibbs.py": "308dab6c3792b487633c49122c87a588c2b828487cde2cf5764c47971f80e14b",
+  "app/entropy.py": "89af3d38497a5b61df9ee99ef773a32e70b4afc53beb40f8a08f7571f879b3a7",
+  "app/auxiliar_func/entropyAux.py": "cbbd0b489cd72f2433b27b5087af670e8fe6f5101912e3c7bb57a9ed06525172",
+  "app/auxiliar_func/eos.py": "9719eddd6d31b92269eb137e3e3fce48a6760cff058fadf6fb09b64b780353ec",
+  "app/auxiliar_func/gibbsZero.py": "10b5914b95bd4a4aeba397a4c39f8219f7fbe66f29d3a8a9d4e7213cb7636e72",
+  "app/auxiliar_func/r2_score.py": "411ed1f9ecbeabf7c65a0398dbc88323eec1224a06c8f6ae0101206b9ca9850c",
+  "app/auxiliar_func/read_data.py": "4c3aa56ff781ca2f9f1886ed0fc48142422be6a33ffac80282adba96c92151d9",
+  "app/auxiliar_func/run_entropy.py": "6565c51df90d9f3813cb64d263c85ee0392e303cee5a7f226bd55e29751efcc8",
+  "app/auxiliar_func/run_gibbs.py": "832ba130c6f731a894abdac36c4505505c508d080c6727fcda95352810223fa5"
+}
