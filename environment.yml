@@ -10,6 +10,6 @@ dependencies:
   - pandas=2.3
   - seaborn=0.13
   - matplotlib=3.10
-  - pyqt=6.9
+  - pyqt6=6.11
   - openpyxl=3.1
   - pyinstaller>=6.15,<7
