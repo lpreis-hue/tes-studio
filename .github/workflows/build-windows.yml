@@ -1,0 +1,73 @@
+name: Build Windows portable
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: TeS Studio Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preparar Miniforge e IPOPT
+        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
+        with:
+          activate-environment: tes-studio
+          environment-file: environment.yml
+          miniforge-version: latest
+          conda-remove-defaults: true
+          channel-priority: strict
+
+      - name: Exibir ambiente científico
+        run: |
+          python --version
+          conda info
+          conda list
+
+      - name: Verificar projeto e interface
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python scripts/check_project.py
+          python scripts/smoke_test.py
+
+      - name: Gerar aplicativo portátil
+        run: python -m PyInstaller --noconfirm --clean tes.spec
+
+      - name: Verificar e compactar entrega
+        run: |
+          $appDirectory = Join-Path $PWD "dist\TeS Studio"
+          $executable = Join-Path $appDirectory "TeS Studio.exe"
+          if (-not (Test-Path -LiteralPath $executable)) {
+            throw "Executável não encontrado: $executable"
+          }
+          $archive = Join-Path $PWD "dist\TeS-Studio-Windows-x64.zip"
+          Compress-Archive -LiteralPath $appDirectory -DestinationPath $archive -CompressionLevel Optimal
+          Get-FileHash -LiteralPath $archive -Algorithm SHA256 |
+            Format-List Algorithm, Hash, Path
+
+      - name: Publicar ZIP privado
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: TeS-Studio-Windows-x64
+          path: dist/TeS-Studio-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
