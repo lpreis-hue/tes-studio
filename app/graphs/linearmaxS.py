@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 def linear_graph_maxs(dataframe, label1, label2, value1, value2, components, selected_components, name_colum, graph_type):
     filtered_data = dataframe[(dataframe[label1] == value1) & (dataframe[label2] == value2)]
@@ -15,7 +15,12 @@ def linear_graph_maxs(dataframe, label1, label2, value1, value2, components, sel
     
     line_styles = ['-', '--', ':']
 
-    fig1, ax1 = plt.subplots(figsize=(8, 4))
+    has_fraction_plot = len(selected_components) > 0
+    figure = Figure(figsize=(10, 8 if has_fraction_plot else 5))
+    if has_fraction_plot:
+        ax1, ax2 = figure.subplots(2, 1)
+    else:
+        ax1 = figure.subplots()
 
     if graph_type == "N":
         x = filtered_data[name_colum]
@@ -46,12 +51,7 @@ def linear_graph_maxs(dataframe, label1, label2, value1, value2, components, sel
         ax1_twin.set_ylabel('Equilibrium Temperature (K)', color='black')
         ax1_twin.tick_params(axis='y', labelcolor='black')
 
-    plt.tight_layout()
-    plt.show()
-
-    if len(selected_components) > 0:
-        fig2, ax2 = plt.subplots(figsize=(8, 4))
-        
+    if has_fraction_plot:
         selected_data = filtered_data[selected_components]
         total_sum = selected_data.sum(axis=1)
         normalized_data = selected_data.div(total_sum, axis=0)
@@ -75,5 +75,6 @@ def linear_graph_maxs(dataframe, label1, label2, value1, value2, components, sel
             ax2_twin.set_ylabel('Equilibrium Temperature (K)', color='black')
             ax2_twin.tick_params(axis='y', labelcolor='black')
 
-        plt.tight_layout()
-        plt.show()
+    figure.tight_layout()
+    return figure
+

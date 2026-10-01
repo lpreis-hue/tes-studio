@@ -192,7 +192,7 @@ QLabel#metricValue, QLabel#scenarioValue {
     font-size: 17px;
     font-weight: 700;
 }
-QTableWidget {
+QTableWidget, QTableView {
     color: #d6e5ef;
     background: #081722;
     alternate-background-color: #0b1c29;
@@ -202,7 +202,7 @@ QTableWidget {
     selection-background-color: #0d6f91;
     selection-color: #ffffff;
 }
-QTableWidget::item { padding: 4px; }
+QTableWidget::item, QTableView::item { padding: 4px; }
 QHeaderView::section {
     color: #cce4f2;
     background: #102b3d;
@@ -265,3 +265,4 @@ QStatusBar {
     font-size: 10px;
 }
 """
+

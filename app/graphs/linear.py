@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 def linear_graph(dataframe, label1, label2, value1, value2, components, selected_components, name_colum, graph_type):
     filtered_data = dataframe[(dataframe[label1] == value1) & (dataframe[label2] == value2)]
@@ -32,7 +32,8 @@ def linear_graph(dataframe, label1, label2, value1, value2, components, selected
     '#FF7043'   # Deep Orange
 ]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    fig = Figure(figsize=(15, 6))
+    ax1, ax2 = fig.subplots(1, 2)
 
     if graph_type == "N":
         x = filtered_data[name_colum]
@@ -91,5 +92,6 @@ def linear_graph(dataframe, label1, label2, value1, value2, components, selected
         ax2.grid(True)
         ax2.legend(loc='upper left', bbox_to_anchor=(1.05, 1), fontsize='small')
     
-    plt.tight_layout()
-    plt.show()
+    fig.tight_layout()
+    return fig
+

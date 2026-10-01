@@ -6,7 +6,8 @@ from time import perf_counter
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import Qt
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtGui import QCursor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QApplication,
@@ -21,7 +22,9 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QTabWidget,
+    QSizePolicy,
+    QSplitter,
+    QTableView,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -72,6 +75,33 @@ class CheckableComboBox(QComboBox):
         )
 
 
+class DataFrameTableModel(QAbstractTableModel):
+    """Expose a DataFrame lazily so large result sets do not freeze the UI."""
+
+    def __init__(self, dataframe, parent=None):
+        super().__init__(parent)
+        self.dataframe = dataframe
+
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self.dataframe)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self.dataframe.columns)
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
+            return None
+        value = self.dataframe.iat[index.row(), index.column()]
+        return "" if pd.isna(value) else str(value)
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role != Qt.ItemDataRole.DisplayRole:
+            return None
+        if orientation == Qt.Orientation.Horizontal:
+            return str(self.dataframe.columns[section])
+        return str(section + 1)
+
+
 class AnalysisPanel(QWidget):
     """Result overview and launch controls for the existing plot functions."""
 
@@ -90,32 +120,23 @@ class AnalysisPanel(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 14, 14, 14)
         root.setSpacing(12)
-        root.addLayout(self._build_metrics())
+        root.addWidget(self._build_summary())
         root.addWidget(self._build_plot_card(), 1)
 
-    def _build_metrics(self):
-        layout = QHBoxLayout()
-        layout.setSpacing(10)
+    def _build_summary(self):
         temp_min = self.dataframe[self.temperature_column].min()
         temp_max = self.dataframe[self.temperature_column].max()
         pressure_min = self.dataframe["Pressure"].min()
         pressure_max = self.dataframe["Pressure"].max()
-        metrics = (
-            ("CENÁRIOS", str(len(self.dataframe)), "pontos calculados"),
-            ("COMPONENTES", str(len(self.components)), "no sistema"),
-            ("TEMPERATURA", f"{temp_min:g} – {temp_max:g} K", "faixa simulada"),
-            ("PRESSÃO", f"{pressure_min:g} – {pressure_max:g}", "faixa simulada"),
+        summary = QLabel(
+            f"{len(self.dataframe)} cenários  •  "
+            f"{len(self.components)} componentes  •  "
+            f"{temp_min:g}–{temp_max:g} K  •  "
+            f"Pressão {pressure_min:g}–{pressure_max:g}",
+            objectName="metricSubtitle",
         )
-        for title, value, subtitle in metrics:
-            card = QFrame(objectName="metricCard")
-            card_layout = QVBoxLayout(card)
-            card_layout.setContentsMargins(14, 10, 14, 10)
-            card_layout.setSpacing(1)
-            card_layout.addWidget(QLabel(title, objectName="metricTitle"))
-            card_layout.addWidget(QLabel(value, objectName="metricValue"))
-            card_layout.addWidget(QLabel(subtitle, objectName="metricSubtitle"))
-            layout.addWidget(card, 1)
-        return layout
+        summary.setWordWrap(True)
+        return summary
 
     def _build_plot_card(self):
         card = QFrame(objectName="innerCard")
@@ -208,7 +229,14 @@ class AnalysisPanel(QWidget):
         for combo in (self.n_for_t, self.n_for_p):
             combo.setEnabled(self.has_reference)
         layout.addLayout(composition_grid)
-        layout.addStretch(1)
+
+        self.chart_host = QFrame(objectName="chartHost")
+        self.chart_layout = QVBoxLayout(self.chart_host)
+        self.chart_layout.setContentsMargins(0, 0, 0, 0)
+        placeholder = QLabel("Escolha uma análise para exibir o gráfico nesta área.")
+        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.chart_layout.addWidget(placeholder)
+        layout.addWidget(self.chart_host, 1)
         return card
 
     @staticmethod
@@ -237,13 +265,20 @@ class AnalysisPanel(QWidget):
                 "Use pelo menos dois valores distintos nos eixos X e Y.",
             )
             return
-        plot_superficie(self.dataframe, x_value, y_value, self.z_combo.currentText())
+        self._show_figure(
+            plot_superficie(
+                self.dataframe,
+                x_value,
+                y_value,
+                self.z_combo.currentText(),
+            )
+        )
 
     def _plot_correlation(self):
         if len(self.dataframe.select_dtypes(include="number").columns) < 2:
             self._warn("Dados insuficientes", "São necessárias duas colunas numéricas.")
             return
-        plot_correlation_matrix(df=self.dataframe)
+        self._show_figure(plot_correlation_matrix(df=self.dataframe))
 
     def _plot_composition(self, graph_type):
         selected = self.component_combo.checked_items()
@@ -261,24 +296,37 @@ class AnalysisPanel(QWidget):
             label2, value2 = self.temperature_column, float(self.t_for_n.currentText())
 
         plot_function = linear_graph if self.mode == "gibbs" else linear_graph_maxs
-        plot_function(
-            dataframe=self.dataframe,
-            label1=label1,
-            label2=label2,
-            value1=value1,
-            value2=value2,
-            components=self.components,
-            selected_components=selected,
-            name_colum=self.reference_column,
-            graph_type=graph_type,
+        self._show_figure(
+            plot_function(
+                dataframe=self.dataframe,
+                label1=label1,
+                label2=label2,
+                value1=value1,
+                value2=value2,
+                components=self.components,
+                selected_components=selected,
+                name_colum=self.reference_column,
+                graph_type=graph_type,
+            )
         )
+
+    def _show_figure(self, figure):
+        while self.chart_layout.count():
+            item = self.chart_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.figure_canvas = FigureCanvas(figure)
+        self.figure_canvas.setMinimumHeight(160)
+        self.chart_layout.addWidget(self.figure_canvas)
+        self.figure_canvas.draw_idle()
 
     def _warn(self, title, message):
         QMessageBox.warning(self, title, message)
 
 
 class ResultsTable(QWidget):
-    """Summary table with export of the complete, original result set."""
+    """Lazy full-result table with export of the original result set."""
 
     def __init__(self, dataframe, components, mode, parent=None):
         super().__init__(parent)
@@ -286,55 +334,29 @@ class ResultsTable(QWidget):
         self.temperature_column = (
             "Temperature" if mode == "gibbs" else "Initial Temperature"
         )
-        summary = self._summary_dataframe(dataframe, components)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 14, 14, 14)
         root.setSpacing(10)
         heading = QHBoxLayout()
-        heading.addWidget(QLabel("Resumo dos máximos por componente", objectName="sectionTitle"))
+        heading.addWidget(QLabel("Resultados completos da simulação", objectName="sectionTitle"))
         heading.addStretch(1)
         export = QPushButton("Exportar resultados", objectName="primaryAction")
         export.clicked.connect(self._save_results)
         heading.addWidget(export)
         root.addLayout(heading)
 
-        table = QTableWidget(objectName="resultTable")
-        table.setColumnCount(len(summary.columns))
-        table.setRowCount(len(summary))
-        table.setHorizontalHeaderLabels([str(column) for column in summary.columns])
-        table.verticalHeader().setVisible(False)
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        table.setAlternatingRowColors(True)
-        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        for row in range(len(summary)):
-            for column in range(len(summary.columns)):
-                value = summary.iloc[row, column]
-                item = QTableWidgetItem(str(value))
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                table.setItem(row, column, item)
-        root.addWidget(table, 1)
-
-    def _summary_dataframe(self, dataframe, components):
-        initial_columns = [column for column in dataframe if column.endswith("Initial")]
-        rows = []
-        for component in components:
-            if component not in dataframe:
-                continue
-            values = pd.to_numeric(dataframe[component], errors="coerce")
-            if not values.notna().any():
-                continue
-            max_index = values.idxmax()
-            row = {
-                "Componente": component,
-                "Valor máximo": f"{values.loc[max_index]:.3f}",
-                "Temperatura (K)": dataframe.at[max_index, self.temperature_column],
-                "Pressão": dataframe.at[max_index, "Pressure"],
-            }
-            for column in initial_columns:
-                row[column] = dataframe.at[max_index, column]
-            rows.append(row)
-        return pd.DataFrame(rows)
+        self.table = QTableView(objectName="resultTable")
+        self.model = DataFrameTableModel(dataframe, self.table)
+        self.table.setModel(self.model)
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.table.horizontalHeader().setDefaultSectionSize(115)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setDefaultSectionSize(26)
+        self.table.setAlternatingRowColors(True)
+        self.table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        root.addWidget(self.table, 1)
 
     def _save_results(self):
         file_name, _ = QFileDialog.getSaveFileName(
@@ -377,13 +399,24 @@ class SimulationScreen(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
 
-        top = QHBoxLayout()
+        self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.workspace_splitter.setChildrenCollapsible(False)
+
+        self.setup_host = QWidget()
+        self.setup_host.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Ignored,
+        )
+        top = QHBoxLayout(self.setup_host)
+        top.setContentsMargins(0, 0, 0, 0)
         top.setSpacing(12)
         top.addWidget(self._build_data_card(), 4)
         top.addWidget(self._build_parameters_card(), 6)
         top.addWidget(self._build_run_card(), 3)
-        root.addLayout(top, 3)
-        root.addWidget(self._build_result_tabs(), 4)
+        self.workspace_splitter.addWidget(self.setup_host)
+        self.workspace_splitter.addWidget(self._build_results_workspace())
+        self.workspace_splitter.setSizes([320, 520])
+        root.addWidget(self.workspace_splitter, 1)
 
     def _card(self, title, subtitle=None):
         card = QFrame(objectName="simulationCard")
@@ -508,19 +541,24 @@ class SimulationScreen(QWidget):
         layout.addWidget(summary)
         return card
 
-    def _build_result_tabs(self):
-        self.result_tabs = QTabWidget(objectName="resultTabs")
-        self.analysis_host = QWidget()
-        self.analysis_layout = QVBoxLayout(self.analysis_host)
-        self.analysis_layout.setContentsMargins(0, 0, 0, 0)
-        self.table_host = QWidget()
-        self.table_layout = QVBoxLayout(self.table_host)
-        self.table_layout.setContentsMargins(0, 0, 0, 0)
-        self.analysis_layout.addWidget(self._empty_state("Execute uma simulação para liberar os gráficos."))
-        self.table_layout.addWidget(self._empty_state("Os resultados aparecerão aqui."))
-        self.result_tabs.addTab(self.analysis_host, "Análises")
-        self.result_tabs.addTab(self.table_host, "Resultados")
-        return self.result_tabs
+    def _build_results_workspace(self):
+        workspace = QFrame(objectName="resultsWorkspace")
+        layout = QVBoxLayout(workspace)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(QLabel("Análises e resultados", objectName="sectionTitle"))
+
+        self.results_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.results_splitter.setChildrenCollapsible(False)
+        self.results_splitter.addWidget(
+            self._empty_state("Execute uma simulação para liberar os gráficos.")
+        )
+        self.results_splitter.addWidget(
+            self._empty_state("Os resultados aparecerão nesta mesma área.")
+        )
+        self.results_splitter.setSizes([900, 500])
+        layout.addWidget(self.results_splitter, 1)
+        return workspace
 
     @staticmethod
     def _empty_state(message):
@@ -664,17 +702,17 @@ class SimulationScreen(QWidget):
         self.status_label.setText(
             f"Simulação concluída em {self._format_seconds(elapsed)}."
         )
-        self._replace_layout(
-            self.analysis_layout,
+        self._replace_splitter_widget(
+            0,
             AnalysisPanel(
                 results, self.components, self.reference_componente, self.mode
             ),
         )
-        self._replace_layout(
-            self.table_layout,
+        self._replace_splitter_widget(
+            1,
             ResultsTable(results, self.components, self.mode),
         )
-        self.result_tabs.setCurrentIndex(0)
+        self.workspace_splitter.setSizes([120, 720])
 
     def _on_error(self, error_message):
         self._finish_cursor()
@@ -690,6 +728,12 @@ class SimulationScreen(QWidget):
             if old_widget is not None:
                 old_widget.deleteLater()
         layout.addWidget(widget)
+
+    def _replace_splitter_widget(self, index, widget):
+        previous = self.results_splitter.widget(index)
+        previous.setParent(None)
+        previous.deleteLater()
+        self.results_splitter.insertWidget(index, widget)
 
     def open_file_dialog(self):
         file_name, _ = QFileDialog.getOpenFileName(
@@ -766,3 +810,4 @@ class GibbsSimulationScreen(SimulationScreen):
 class EntropySimulationScreen(SimulationScreen):
     def __init__(self):
         super().__init__("entropy")
+

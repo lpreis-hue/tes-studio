@@ -22,4 +22,8 @@
   equações, os balanços ou as tolerâncias numéricas.
 - Interface redesenhada no tema técnico escuro, com parâmetros agrupados,
   cálculo prévio do total de cenários, progresso com tempo estimado e áreas
-  separadas para análises e resultados.
+  integradas para análises e resultados.
+- Gráficos Matplotlib incorporados à interface, sem janelas externas.
+- Gráficos e tabela completa de resultados exibidos lado a lado na mesma guia,
+  com divisão redimensionável e exportação para Excel ou CSV preservada.
+
